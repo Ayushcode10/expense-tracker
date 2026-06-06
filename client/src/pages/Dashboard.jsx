@@ -7,25 +7,31 @@ import FilterPanel from "../components/FilterPanel/FilterPanel";
 import ExpenseTable from "../components/ExpenseTable/ExpenseTable";
 import ExpenseChart from "../components/ExpenseChart/ExpenseChart";
 import BudgetTracker from "../components/BudgetTracker/BudgetTracker";
+import EditExpenseModal from "../components/EditExpenseModal/EditExpenseModal";
 
 export default function Dashboard() {
   const {
-    expenses, summary, filters,
-    loading, summaryLoading, error,
-    addExpense, editExpense, removeExpense,
-    applyFilters, clearFilters,
+    expenses,
+    summary,
+    filters,
+    loading,
+    summaryLoading,
+    error,
+    addExpense,
+    editExpense,
+    removeExpense,
+    applyFilters,
+    clearFilters,
   } = useExpenses();
 
   const { budgets, saveBudget, removeBudget } = useBudgets();
+
+  // editTarget drives the modal. null = closed. expense object = open.
   const [editTarget, setEditTarget] = useState(null);
 
-  const handleFormSubmit = async (data) => {
-    if (editTarget) {
-      await editExpense(editTarget.id, data);
-      setEditTarget(null);
-    } else {
-      await addExpense(data);
-    }
+  const handleEditSubmit = async (data) => {
+    await editExpense(editTarget.id, data);
+    setEditTarget(null); // close modal only after successful update
   };
 
   return (
@@ -35,7 +41,9 @@ export default function Dashboard() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-900">💸 Expense Tracker</h1>
-            <p className="text-xs text-gray-400 mt-0.5">Track and manage your spending</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Track and manage your spending
+            </p>
           </div>
           <span className="text-xs text-gray-400 hidden sm:block">
             Studio Graphene — Take Home
@@ -44,16 +52,13 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        {/* Summary cards */}
+        {/* Summary */}
         <SummaryCards summary={summary} loading={summaryLoading} />
 
-        {/* Form + Filters */}
+        {/* Add form + Filters + Budgets */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ExpenseForm
-            onSubmit={handleFormSubmit}
-            editTarget={editTarget}
-            onCancelEdit={() => setEditTarget(null)}
-          />
+          {/* ExpenseForm is now add-only — no edit props */}
+          <ExpenseForm onSubmit={addExpense} />
           <div className="space-y-6">
             <FilterPanel
               filters={filters}
@@ -69,7 +74,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Table */}
+        {/* Table — onEdit sets editTarget, which opens the modal */}
         <ExpenseTable
           expenses={expenses}
           loading={loading}
@@ -81,6 +86,20 @@ export default function Dashboard() {
         {/* Chart */}
         <ExpenseChart summary={summary} />
       </main>
+
+      {/*
+        Modal lives outside <main> so it's never clipped by any
+        overflow:hidden parent and sits above all page content (z-50).
+        Conditional render also fully unmounts the component on close,
+        which resets all local form state automatically.
+      */}
+      {editTarget && (
+        <EditExpenseModal
+          expense={editTarget}
+          onSubmit={handleEditSubmit}
+          onClose={() => setEditTarget(null)}
+        />
+      )}
     </div>
   );
 }

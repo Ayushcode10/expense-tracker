@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { CATEGORIES } from "../../utils/constants";
 import { todayISO } from "../../utils/formatters";
 
@@ -9,25 +9,12 @@ const EMPTY_FORM = {
   note: "",
 };
 
-export default function ExpenseForm({ onSubmit, editTarget, onCancelEdit }) {
+// This component handles NEW expense creation only.
+// Editing is handled by EditExpenseModal.
+export default function ExpenseForm({ onSubmit }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-
-  // Populate form when editing
-  useEffect(() => {
-    if (editTarget) {
-      setForm({
-        amount: editTarget.amount,
-        category: editTarget.category,
-        date: editTarget.date,
-        note: editTarget.note || "",
-      });
-      setErrors({});
-    } else {
-      setForm(EMPTY_FORM);
-    }
-  }, [editTarget]);
 
   const validate = () => {
     const newErrors = {};
@@ -59,7 +46,6 @@ export default function ExpenseForm({ onSubmit, editTarget, onCancelEdit }) {
       setErrors(validationErrors);
       return;
     }
-
     setSubmitting(true);
     try {
       await onSubmit({
@@ -72,20 +58,19 @@ export default function ExpenseForm({ onSubmit, editTarget, onCancelEdit }) {
       setErrors({});
     } catch (err) {
       const serverErrors = err?.response?.data?.fieldErrors;
-      if (serverErrors) setErrors(serverErrors);
-      else setErrors({ general: "Something went wrong. Please try again." });
+      if (serverErrors) {
+        setErrors(serverErrors);
+      } else {
+        setErrors({ general: "Something went wrong. Please try again." });
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
-  const isEditing = !!editTarget;
-
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">
-        {isEditing ? "✏️ Edit Expense" : "➕ Add Expense"}
-      </h2>
+      <h2 className="text-lg font-semibold text-gray-800 mb-4">➕ Add Expense</h2>
 
       {errors.general && (
         <p className="text-sm text-red-500 mb-3 bg-red-50 p-2 rounded-lg">
@@ -132,7 +117,9 @@ export default function ExpenseForm({ onSubmit, editTarget, onCancelEdit }) {
             >
               <option value="">Select category</option>
               {CATEGORIES.map((c) => (
-                <option key={c} value={c}>{c}</option>
+                <option key={c} value={c}>
+                  {c}
+                </option>
               ))}
             </select>
             {errors.category && (
@@ -162,7 +149,8 @@ export default function ExpenseForm({ onSubmit, editTarget, onCancelEdit }) {
           {/* Note */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Note <span className="text-gray-400 font-normal">(optional)</span>
+              Note{" "}
+              <span className="text-gray-400 font-normal">(optional)</span>
             </label>
             <input
               type="text"
@@ -181,24 +169,13 @@ export default function ExpenseForm({ onSubmit, editTarget, onCancelEdit }) {
           </div>
         </div>
 
-        <div className="flex gap-3 pt-1">
-          <button
-            type="submit"
-            disabled={submitting}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl text-sm font-medium transition disabled:opacity-60"
-          >
-            {submitting ? "Saving..." : isEditing ? "Update Expense" : "Add Expense"}
-          </button>
-          {isEditing && (
-            <button
-              type="button"
-              onClick={onCancelEdit}
-              className="border border-gray-200 text-gray-600 hover:bg-gray-50 px-5 py-2 rounded-xl text-sm font-medium transition"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
+        <button
+          type="submit"
+          disabled={submitting}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl text-sm font-medium transition disabled:opacity-60"
+        >
+          {submitting ? "Saving..." : "Add Expense"}
+        </button>
       </form>
     </div>
   );
