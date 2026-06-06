@@ -9,43 +9,51 @@ export function useExpenses() {
     startDate: "",
     endDate: "",
   });
+
+  // Month/year for the summary panel — defaults to current month
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+
   const [loading, setLoading] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // ── Fetch expenses ─────────────────────────────────────────────────────
+  // Use primitive string values as deps, NOT the filters object.
+  // String comparison is value-based; object comparison is reference-based.
+  // This prevents stale closures and missed re-fetches.
   const fetchExpenses = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const res = await expenseService.getAll(filters);
       setExpenses(res.data);
-    } catch (err) {
+    } catch {
       setError("Failed to load expenses. Is the server running?");
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.category, filters.startDate, filters.endDate]);
 
+  // ── Fetch summary for the selected month/year ──────────────────────────
   const fetchSummary = useCallback(async () => {
     setSummaryLoading(true);
     try {
-      const res = await expenseService.getSummary();
+      const res = await expenseService.getSummary(selectedMonth, selectedYear);
       setSummary(res.data);
     } catch {
-      // Summary failing shouldn't block the whole page
+      // Summary failure is non-blocking
     } finally {
       setSummaryLoading(false);
     }
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
-  useEffect(() => {
-    fetchExpenses();
-  }, [fetchExpenses]);
+  useEffect(() => { fetchExpenses(); }, [fetchExpenses]);
+  useEffect(() => { fetchSummary(); }, [fetchSummary]);
 
-  useEffect(() => {
-    fetchSummary();
-  }, [fetchSummary]);
-
+  // ── Mutations ──────────────────────────────────────────────────────────
   const addExpense = async (data) => {
     const res = await expenseService.create(data);
     setExpenses((prev) => [res.data, ...prev]);
@@ -66,18 +74,25 @@ export function useExpenses() {
     fetchSummary();
   };
 
-  const applyFilters = (newFilters) => {
-    setFilters(newFilters);
-  };
+  // ── Filter controls ────────────────────────────────────────────────────
+  const applyFilters = (newFilters) => setFilters(newFilters);
 
-  const clearFilters = () => {
+  const clearFilters = () =>
     setFilters({ category: "", startDate: "", endDate: "" });
+
+  // ── Month/year picker control ──────────────────────────────────────────
+  const changeMonth = (month, year) => {
+    setSelectedMonth(month);
+    setSelectedYear(year);
   };
 
   return {
     expenses,
     summary,
     filters,
+    selectedMonth,
+    selectedYear,
+    changeMonth,
     loading,
     summaryLoading,
     error,

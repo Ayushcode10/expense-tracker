@@ -20,5 +20,11 @@ export const expenseService = {
 
   remove: (id) => api.delete(`/api/expenses/${id}`),
 
-  getSummary: () => api.get("/api/expenses/summary"),
+  // month and year are now passed explicitly
+  getSummary: (month, year) => {
+    const params = {};
+    if (month) params.month = month;
+    if (year) params.year = year;
+    return api.get("/api/expenses/summary", { params });
+  },
 };

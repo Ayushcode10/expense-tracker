@@ -51,8 +51,13 @@ public class ExpenseController {
         return ResponseEntity.noContent().build();
     }
 
+
+
     @GetMapping("/summary")
-    public ResponseEntity<SummaryResponse> getSummary(){
-        return ResponseEntity.ok(expenseService.getSummary());
+    public ResponseEntity<SummaryResponse> getSummary(
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year
+    ) {
+        return ResponseEntity.ok(expenseService.getSummary(month, year));
     }
 }

@@ -83,16 +83,19 @@ public class ExpenseService {
 
     //----SUMMARY------------------------------------------------------------------------------
 
-    public SummaryResponse getSummary(){
+    public SummaryResponse getSummary(Integer month, Integer year) {
         LocalDate now = LocalDate.now();
 
-        BigDecimal totalThisMonth = expenseRepository
-                .sumAmountForMonth(now.getMonthValue(), now.getYear());
+        // Use provided month/year, fall back to current month/year
+        int targetMonth = (month != null) ? month : now.getMonthValue();
+        int targetYear  = (year  != null) ? year  : now.getYear();
 
-        List<Object[]> categoryTotals = expenseRepository
-                .sumAmountGroupedByCategory();
-        Map<String,BigDecimal> totalPerCategory = new LinkedHashMap<>();
-        for(Object[] row: categoryTotals){
+        BigDecimal totalForMonth = expenseRepository
+                .sumAmountForMonth(targetMonth, targetYear);
+
+        List<Object[]> categoryTotals = expenseRepository.sumAmountGroupedByCategory();
+        Map<String, BigDecimal> totalPerCategory = new LinkedHashMap<>();
+        for (Object[] row : categoryTotals) {
             totalPerCategory.put((String) row[0], (BigDecimal) row[1]);
         }
 
@@ -100,12 +103,12 @@ public class ExpenseService {
         String highestCategory = null;
 
         List<Expense> highestExpenses = expenseRepository.findExpenseWithHighestAmount();
-        if(!highestExpenses.isEmpty()){
+        if (!highestExpenses.isEmpty()) {
             highestCategory = highestExpenses.get(0).getCategory();
         }
 
         return SummaryResponse.builder()
-                .totalThisMonth(totalThisMonth != null ? totalThisMonth : BigDecimal.ZERO)
+                .totalThisMonth(totalForMonth != null ? totalForMonth : BigDecimal.ZERO)
                 .totalPerCategory(totalPerCategory)
                 .highestExpense(highestAmount != null ? highestAmount : BigDecimal.ZERO)
                 .highestExpenseCategory(highestCategory)
