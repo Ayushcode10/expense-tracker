@@ -1,20 +1,27 @@
 package com.expensetracker.backend.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 import java.util.Map;
 
-@Data
-@AllArgsConstructor
+@Getter
+@Setter
 @NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class SummaryResponse {
+
+    // Total spent in the requested month
     private BigDecimal totalThisMonth;
-    private Map<String,BigDecimal> totalPerCategory;
+
+    // All-time totals per category — powers the bar chart and top category card
+    private Map<String, BigDecimal> totalPerCategory;
+
+    // ── NEW ──────────────────────────────────────────────────────────────
+    // Spending per category for the requested month — powers budget progress bars
+    private Map<String, BigDecimal> totalPerCategoryThisMonth;
+
     private BigDecimal highestExpense;
     private String highestExpenseCategory;
 }

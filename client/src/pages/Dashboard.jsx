@@ -11,20 +11,11 @@ import EditExpenseModal from "../components/EditExpenseModal/EditExpenseModal";
 
 export default function Dashboard() {
   const {
-    expenses,
-    summary,
-    filters,
-    selectedMonth,
-    selectedYear,
-    changeMonth,
-    loading,
-    summaryLoading,
-    error,
-    addExpense,
-    editExpense,
-    removeExpense,
-    applyFilters,
-    clearFilters,
+    expenses, summary, filters,
+    selectedMonth, selectedYear, changeMonth,
+    loading, summaryLoading, error,
+    addExpense, editExpense, removeExpense,
+    applyFilters, clearFilters,
   } = useExpenses();
 
   const { budgets, saveBudget, removeBudget } = useBudgets();
@@ -50,7 +41,6 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        {/* Summary cards now receive month/year state */}
         <SummaryCards
           summary={summary}
           loading={summaryLoading}
@@ -67,11 +57,15 @@ export default function Dashboard() {
               onApply={applyFilters}
               onClear={clearFilters}
             />
+            {/* Pass selectedMonth + selectedYear so BudgetTracker
+                knows which month's spending to compare against */}
             <BudgetTracker
               budgets={budgets}
               onSave={saveBudget}
               onRemove={removeBudget}
               summary={summary}
+              selectedMonth={selectedMonth}
+              selectedYear={selectedYear}
             />
           </div>
         </div>

@@ -2,10 +2,25 @@ import { useState } from "react";
 import { CATEGORIES, CATEGORY_COLORS } from "../../utils/constants";
 import { formatCurrency } from "../../utils/formatters";
 
-export default function BudgetTracker({ budgets, onSave, onRemove, summary }) {
+// Formats "June 2025" from month (1-indexed) and year
+function monthLabel(month, year) {
+  return new Date(year, month - 1, 1).toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+export default function BudgetTracker({
+  budgets,
+  onSave,
+  onRemove,
+  summary,
+  selectedMonth,
+  selectedYear,
+}) {
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [budgetAmount, setBudgetAmount] = useState("");
-  const [error, setError] = useState("");
+  const [budgetAmount, setBudgetAmount]         = useState("");
+  const [error, setError]                       = useState("");
 
   const handleSave = () => {
     if (!selectedCategory) { setError("Please select a category"); return; }
@@ -20,12 +35,28 @@ export default function BudgetTracker({ budgets, onSave, onRemove, summary }) {
     setError("");
   };
 
-  const spendingByCategory = summary?.totalPerCategory || {};
-  const budgetEntries = Object.entries(budgets);
+  // ── KEY FIX ────────────────────────────────────────────────────────────
+  // Use totalPerCategoryThisMonth (scoped to selected month)
+  // instead of totalPerCategory (all-time).
+  const spendingByCategory = summary?.totalPerCategoryThisMonth || {};
+
+  const budgetEntries  = Object.entries(budgets);
+  const currentLabel   = monthLabel(selectedMonth, selectedYear);
+  const isCurrentMonth =
+    selectedMonth === new Date().getMonth() + 1 &&
+    selectedYear  === new Date().getFullYear();
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-      <h2 className="text-lg font-semibold text-gray-800 mb-4">🎯 Budget Tracker</h2>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-800">🎯 Budget Tracker</h2>
+        {budgetEntries.length > 0 && (
+          <span className="text-xs text-gray-400">
+            Tracking: <span className="font-medium text-gray-600">{currentLabel}</span>
+          </span>
+        )}
+      </div>
 
       {/* Budget input */}
       <div className="space-y-3">
@@ -45,6 +76,7 @@ export default function BudgetTracker({ budgets, onSave, onRemove, summary }) {
               ))}
             </select>
           </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Monthly Budget (₹)
@@ -73,31 +105,56 @@ export default function BudgetTracker({ budgets, onSave, onRemove, summary }) {
       {/* Budget progress bars */}
       {budgetEntries.length > 0 && (
         <div className="mt-6 space-y-4">
-          <p className="text-sm font-medium text-gray-600">Budget Progress</p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-gray-600">
+              Progress — {currentLabel}
+            </p>
+            {!isCurrentMonth && (
+              <p className="text-xs text-amber-500 bg-amber-50 px-2 py-1 rounded-lg">
+                Viewing historical month
+              </p>
+            )}
+          </div>
+
           {budgetEntries.map(([category, budget]) => {
             const spent = Number(spendingByCategory[category] || 0);
-            const pct = Math.min((spent / budget) * 100, 100);
-            const over = spent > budget;
+            const pct   = Math.min((spent / budget) * 100, 100);
+            const over  = spent > budget;
             const color = CATEGORY_COLORS[category] || "#6366f1";
 
             return (
               <div key={category}>
                 <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm font-medium text-gray-700">
-                    {category}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: color }}
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      {category}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-3">
                     <span className={`text-xs font-medium ${over ? "text-red-500" : "text-gray-500"}`}>
-                      {formatCurrency(spent)} / {formatCurrency(budget)}
+                      {formatCurrency(spent)}
+                      <span className="text-gray-400 font-normal">
+                        {" "}/ {formatCurrency(budget)}
+                      </span>
+                    </span>
+                    <span className={`text-xs font-semibold ${over ? "text-red-500" : "text-gray-400"}`}>
+                      {pct.toFixed(0)}%
                     </span>
                     <button
                       onClick={() => onRemove(category)}
-                      className="text-xs text-gray-300 hover:text-red-400 transition"
+                      aria-label={`Remove ${category} budget`}
+                      className="text-gray-300 hover:text-red-400 transition text-xs w-4 h-4 flex items-center justify-center"
                     >
                       ✕
                     </button>
                   </div>
                 </div>
+
+                {/* Progress bar */}
                 <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-500"
@@ -107,9 +164,15 @@ export default function BudgetTracker({ budgets, onSave, onRemove, summary }) {
                     }}
                   />
                 </div>
-                {over && (
+
+                {/* Status text */}
+                {over ? (
                   <p className="text-xs text-red-500 mt-1">
-                    Over budget by {formatCurrency(spent - budget)}
+                    Over budget by {formatCurrency(spent - budget)} this month
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-400 mt-1">
+                    {formatCurrency(budget - spent)} remaining
                   </p>
                 )}
               </div>
@@ -120,7 +183,7 @@ export default function BudgetTracker({ budgets, onSave, onRemove, summary }) {
 
       {budgetEntries.length === 0 && (
         <p className="text-sm text-gray-400 mt-4">
-          Set a budget above to start tracking your spending limits.
+          Set a monthly budget per category above to track your limits.
         </p>
       )}
     </div>

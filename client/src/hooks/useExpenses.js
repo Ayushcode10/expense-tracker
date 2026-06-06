@@ -10,7 +10,6 @@ export function useExpenses() {
     endDate: "",
   });
 
-  // Month/year for the summary panel — defaults to current month
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
@@ -20,38 +19,51 @@ export function useExpenses() {
   const [error, setError] = useState(null);
 
   // ── Fetch expenses ─────────────────────────────────────────────────────
-  // Use primitive string values as deps, NOT the filters object.
-  // String comparison is value-based; object comparison is reference-based.
-  // This prevents stale closures and missed re-fetches.
-  const fetchExpenses = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await expenseService.getAll(filters);
-      setExpenses(res.data);
-    } catch {
-      setError("Failed to load expenses. Is the server running?");
-    } finally {
-      setLoading(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Single useEffect reads filters directly — no useCallback chain.
+  // The cancellation flag prevents setting state on an unmounted component
+  // (e.g. if the user changes filters before the previous request finishes).
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await expenseService.getAll(filters);
+        if (!cancelled) setExpenses(res.data);
+      } catch {
+        if (!cancelled) setError("Failed to load expenses. Is the server running?");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+
+    // Cleanup: if filters change before the request resolves,
+    // discard the stale response instead of overwriting fresh data
+    return () => { cancelled = true; };
+
+  // Primitive string deps — value comparison, never stale
   }, [filters.category, filters.startDate, filters.endDate]);
 
-  // ── Fetch summary for the selected month/year ──────────────────────────
+  // ── Fetch summary ──────────────────────────────────────────────────────
+  // Separate effect — runs when selected month/year changes
   const fetchSummary = useCallback(async () => {
     setSummaryLoading(true);
     try {
       const res = await expenseService.getSummary(selectedMonth, selectedYear);
       setSummary(res.data);
     } catch {
-      // Summary failure is non-blocking
+      // Non-blocking — summary failure shouldn't break the whole page
     } finally {
       setSummaryLoading(false);
     }
   }, [selectedMonth, selectedYear]);
 
-  useEffect(() => { fetchExpenses(); }, [fetchExpenses]);
-  useEffect(() => { fetchSummary(); }, [fetchSummary]);
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
 
   // ── Mutations ──────────────────────────────────────────────────────────
   const addExpense = async (data) => {
@@ -75,16 +87,9 @@ export function useExpenses() {
   };
 
   // ── Filter controls ────────────────────────────────────────────────────
-  const applyFilters = (newFilters) => setFilters(newFilters);
-
-  const clearFilters = () =>
-    setFilters({ category: "", startDate: "", endDate: "" });
-
-  // ── Month/year picker control ──────────────────────────────────────────
-  const changeMonth = (month, year) => {
-    setSelectedMonth(month);
-    setSelectedYear(year);
-  };
+  const applyFilters  = (newFilters) => setFilters(newFilters);
+  const clearFilters  = () => setFilters({ category: "", startDate: "", endDate: "" });
+  const changeMonth   = (month, year) => { setSelectedMonth(month); setSelectedYear(year); };
 
   return {
     expenses,
