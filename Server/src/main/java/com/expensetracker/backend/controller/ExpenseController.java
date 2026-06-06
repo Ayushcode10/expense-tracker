@@ -26,10 +26,15 @@ public class ExpenseController {
     @GetMapping
     public ResponseEntity<List<ExpenseResponse>> getExpenses(
             @RequestParam(required = false) String category,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate startDate,
+
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate endDate
             ){
-        return ResponseEntity.ok(expenseService.getExpenses(category,from,to));
+        return ResponseEntity.ok(expenseService.getExpenses(category,startDate,endDate));
     }
 
     @PostMapping
