@@ -2,25 +2,17 @@ import { useState } from "react";
 import { CATEGORIES, CATEGORY_COLORS } from "../../utils/constants";
 import { formatCurrency } from "../../utils/formatters";
 
-// Formats "June 2025" from month (1-indexed) and year
-function monthLabel(month, year) {
-  return new Date(year, month - 1, 1).toLocaleDateString("en-IN", {
+function currentMonthLabel() {
+  return new Date().toLocaleDateString("en-IN", {
     month: "long",
     year: "numeric",
   });
 }
 
-export default function BudgetTracker({
-  budgets,
-  onSave,
-  onRemove,
-  summary,
-  selectedMonth,
-  selectedYear,
-}) {
+export default function BudgetTracker({ budgets, onSave, onRemove, budgetSpending }) {
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [budgetAmount, setBudgetAmount]         = useState("");
-  const [error, setError]                       = useState("");
+  const [budgetAmount,     setBudgetAmount]      = useState("");
+  const [error,            setError]             = useState("");
 
   const handleSave = () => {
     if (!selectedCategory) { setError("Please select a category"); return; }
@@ -35,30 +27,19 @@ export default function BudgetTracker({
     setError("");
   };
 
-  // ── KEY FIX ────────────────────────────────────────────────────────────
-  // Use totalPerCategoryThisMonth (scoped to selected month)
-  // instead of totalPerCategory (all-time).
-  const spendingByCategory = summary?.totalPerCategoryThisMonth || {};
+  // budgetSpending is computed from this month's real expense data
+  const spending = budgetSpending || {};
 
-  const budgetEntries  = Object.entries(budgets);
-  const currentLabel   = monthLabel(selectedMonth, selectedYear);
-  const isCurrentMonth =
-    selectedMonth === new Date().getMonth() + 1 &&
-    selectedYear  === new Date().getFullYear();
+  const budgetEntries = Object.entries(budgets);
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-      {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-800">🎯 Budget Tracker</h2>
-        {budgetEntries.length > 0 && (
-          <span className="text-xs text-gray-400">
-            Tracking: <span className="font-medium text-gray-600">{currentLabel}</span>
-          </span>
-        )}
+        <span className="text-xs text-gray-400">{currentMonthLabel()}</span>
       </div>
 
-      {/* Budget input */}
+      {/* Input */}
       <div className="space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -102,22 +83,14 @@ export default function BudgetTracker({
         </button>
       </div>
 
-      {/* Budget progress bars */}
+      {/* Progress bars */}
       {budgetEntries.length > 0 && (
         <div className="mt-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-600">
-              Progress — {currentLabel}
-            </p>
-            {!isCurrentMonth && (
-              <p className="text-xs text-amber-500 bg-amber-50 px-2 py-1 rounded-lg">
-                Viewing historical month
-              </p>
-            )}
-          </div>
-
+          <p className="text-sm font-medium text-gray-600">
+            Monthly Progress
+          </p>
           {budgetEntries.map(([category, budget]) => {
-            const spent = Number(spendingByCategory[category] || 0);
+            const spent = Number(spending[category] || 0);
             const pct   = Math.min((spent / budget) * 100, 100);
             const over  = spent > budget;
             const color = CATEGORY_COLORS[category] || "#6366f1";
@@ -127,7 +100,7 @@ export default function BudgetTracker({
                 <div className="flex justify-between items-center mb-1">
                   <div className="flex items-center gap-2">
                     <span
-                      className="w-2 h-2 rounded-full"
+                      className="w-2 h-2 rounded-full flex-shrink-0"
                       style={{ backgroundColor: color }}
                     />
                     <span className="text-sm font-medium text-gray-700">
@@ -135,26 +108,22 @@ export default function BudgetTracker({
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className={`text-xs font-medium ${over ? "text-red-500" : "text-gray-500"}`}>
-                      {formatCurrency(spent)}
+                    <span className={`text-xs ${over ? "text-red-500 font-medium" : "text-gray-500"}`}>
+                      {formatCurrency(spent)}{" "}
                       <span className="text-gray-400 font-normal">
-                        {" "}/ {formatCurrency(budget)}
+                        / {formatCurrency(budget)}
                       </span>
-                    </span>
-                    <span className={`text-xs font-semibold ${over ? "text-red-500" : "text-gray-400"}`}>
-                      {pct.toFixed(0)}%
                     </span>
                     <button
                       onClick={() => onRemove(category)}
                       aria-label={`Remove ${category} budget`}
-                      className="text-gray-300 hover:text-red-400 transition text-xs w-4 h-4 flex items-center justify-center"
+                      className="text-gray-300 hover:text-red-400 transition leading-none"
                     >
                       ✕
                     </button>
                   </div>
                 </div>
 
-                {/* Progress bar */}
                 <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all duration-500"
@@ -165,16 +134,11 @@ export default function BudgetTracker({
                   />
                 </div>
 
-                {/* Status text */}
-                {over ? (
-                  <p className="text-xs text-red-500 mt-1">
-                    Over budget by {formatCurrency(spent - budget)} this month
-                  </p>
-                ) : (
-                  <p className="text-xs text-gray-400 mt-1">
-                    {formatCurrency(budget - spent)} remaining
-                  </p>
-                )}
+                <p className={`text-xs mt-1 ${over ? "text-red-500" : "text-gray-400"}`}>
+                  {over
+                    ? `Over by ${formatCurrency(spent - budget)} this month`
+                    : `${formatCurrency(budget - spent)} remaining`}
+                </p>
               </div>
             );
           })}

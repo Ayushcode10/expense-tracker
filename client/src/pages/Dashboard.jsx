@@ -1,21 +1,31 @@
 import { useState } from "react";
 import { useExpenses } from "../hooks/useExpenses";
 import { useBudgets } from "../hooks/useBudgets";
-import SummaryCards from "../components/SummaryCards/SummaryCards";
-import ExpenseForm from "../components/ExpenseForm/ExpenseForm";
-import FilterPanel from "../components/FilterPanel/FilterPanel";
-import ExpenseTable from "../components/ExpenseTable/ExpenseTable";
-import ExpenseChart from "../components/ExpenseChart/ExpenseChart";
-import BudgetTracker from "../components/BudgetTracker/BudgetTracker";
+import SummaryCards    from "../components/SummaryCards/SummaryCards";
+import ExpenseForm     from "../components/ExpenseForm/ExpenseForm";
+import FilterPanel     from "../components/FilterPanel/FilterPanel";
+import ExpenseTable    from "../components/ExpenseTable/ExpenseTable";
+import ExpenseChart    from "../components/ExpenseChart/ExpenseChart";
+import BudgetTracker   from "../components/BudgetTracker/BudgetTracker";
 import EditExpenseModal from "../components/EditExpenseModal/EditExpenseModal";
 
 export default function Dashboard() {
   const {
-    expenses, summary, filters,
-    selectedMonth, selectedYear, changeMonth,
-    loading, summaryLoading, error,
-    addExpense, editExpense, removeExpense,
-    applyFilters, clearFilters,
+    expenses,
+    summary,
+    budgetSpending,
+    filters,
+    selectedMonth,
+    selectedYear,
+    changeMonth,
+    loading,
+    summaryLoading,
+    error,
+    addExpense,
+    editExpense,
+    removeExpense,
+    applyFilters,
+    clearFilters,
   } = useExpenses();
 
   const { budgets, saveBudget, removeBudget } = useBudgets();
@@ -57,15 +67,11 @@ export default function Dashboard() {
               onApply={applyFilters}
               onClear={clearFilters}
             />
-            {/* Pass selectedMonth + selectedYear so BudgetTracker
-                knows which month's spending to compare against */}
             <BudgetTracker
               budgets={budgets}
               onSave={saveBudget}
               onRemove={removeBudget}
-              summary={summary}
-              selectedMonth={selectedMonth}
-              selectedYear={selectedYear}
+              budgetSpending={budgetSpending}  
             />
           </div>
         </div>
@@ -74,6 +80,7 @@ export default function Dashboard() {
           expenses={expenses}
           loading={loading}
           error={error}
+          filters={filters}           
           onEdit={setEditTarget}
           onDelete={removeExpense}
         />

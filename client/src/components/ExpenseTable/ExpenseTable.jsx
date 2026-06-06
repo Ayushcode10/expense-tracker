@@ -19,11 +19,12 @@ export default function ExpenseTable({
   expenses,
   loading,
   error,
+  filters,     // ← needed to show the right empty-state message
   onEdit,
   onDelete,
 }) {
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+  const [deleting,     setDeleting]     = useState(false);
 
   const handleDeleteConfirm = async () => {
     setDeleting(true);
@@ -35,27 +36,25 @@ export default function ExpenseTable({
     }
   };
 
-  // Export to CSV
   const handleExport = () => {
     if (expenses.length === 0) return;
     const headers = ["Date", "Category", "Amount", "Note"];
-    const rows = expenses.map((e) => [
-      e.date,
-      e.category,
-      e.amount,
-      e.note || "",
-    ]);
-    const csv = [headers, ...rows]
+    const rows    = expenses.map((e) => [e.date, e.category, e.amount, e.note || ""]);
+    const csv     = [headers, ...rows]
       .map((r) => r.map((v) => `"${v}"`).join(","))
       .join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
     a.download = `expenses-${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  // Determine whether any filter is active
+  const hasActiveFilter =
+    filters?.category || filters?.startDate || filters?.endDate;
 
   if (loading) {
     return (
@@ -80,6 +79,7 @@ export default function ExpenseTable({
   return (
     <>
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-800">
             📋 Expenses{" "}
@@ -97,8 +97,21 @@ export default function ExpenseTable({
         </div>
 
         {expenses.length === 0 ? (
-          <div className="p-10 text-center text-gray-400 text-sm">
-            No expenses found. Add one above!
+          <div className="p-10 text-center">
+            {hasActiveFilter ? (
+              <>
+                <p className="text-gray-500 text-sm font-medium">
+                  No expenses match your filters.
+                </p>
+                <p className="text-gray-400 text-xs mt-1">
+                  Try a different date range or category, or clear the filters.
+                </p>
+              </>
+            ) : (
+              <p className="text-gray-400 text-sm">
+                No expenses yet. Add one using the form above!
+              </p>
+            )}
           </div>
         ) : (
           <>
@@ -127,7 +140,9 @@ export default function ExpenseTable({
                         <CategoryBadge category={expense.category} />
                       </td>
                       <td className="px-5 py-3 text-gray-500 max-w-xs truncate">
-                        {expense.note || <span className="text-gray-300">—</span>}
+                        {expense.note || (
+                          <span className="text-gray-300">—</span>
+                        )}
                       </td>
                       <td className="px-5 py-3 text-right font-semibold text-gray-800 whitespace-nowrap">
                         {formatCurrency(expense.amount)}
@@ -154,7 +169,7 @@ export default function ExpenseTable({
               </table>
             </div>
 
-            {/* Mobile card list */}
+            {/* Mobile cards */}
             <div className="sm:hidden divide-y divide-gray-100">
               {expenses.map((expense) => (
                 <div key={expense.id} className="p-4">
